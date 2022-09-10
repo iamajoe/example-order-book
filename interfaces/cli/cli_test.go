@@ -39,19 +39,6 @@ func Test_readCSVFile(t *testing.T) {
 	}
 }
 
-func Test_printHelp(t *testing.T) {
-	tests := []struct {
-		name string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			printHelp()
-		})
-	}
-}
-
 func TestInit(t *testing.T) {
 	type args struct {
 		inputFile string
@@ -111,12 +98,12 @@ func TestInit(t *testing.T) {
 			wantPath: "fixtures/8_output_balanced_book_limit_buy_partial.csv",
 			wantErr:  false,
 		},
-		// {
-		// 	name:     "runs: 9_input_balanced_book_cancel_best_bid_and_offer",
-		// 	args:     []string{"book", "fixtures/9_input_balanced_book_cancel_best_bid_and_offer.csv"},
-		// 	wantPath: "fixtures/9_output_balanced_book_cancel_best_bid_and_offer.csv",
-		// 	wantErr:  false,
-		// },
+		{
+			name:     "runs: 9_input_balanced_book_cancel_best_bid_and_offer",
+			args:     []string{"book", "fixtures/9_input_balanced_book_cancel_best_bid_and_offer.csv"},
+			wantPath: "fixtures/9_output_balanced_book_cancel_best_bid_and_offer.csv",
+			wantErr:  false,
+		},
 		{
 			name:     "runs: 10_input_balanced_book_cancel_behind_best_bid_and_offer",
 			args:     []string{"book", "fixtures/10_input_balanced_book_cancel_behind_best_bid_and_offer.csv"},

@@ -92,12 +92,21 @@ func cancelOrder(record []string, repos entity.Repositories) ([][]string, error)
 		return response, err
 	}
 
-	err = domain.CancelOrder(userOrderID, userID, repos.GetOrder())
+	topOrder, err := domain.CancelOrder(userOrderID, userID, repos.GetOrder())
 	if err != nil {
 		return response, err
 	}
 
 	response = append(response, []string{"A", userIDRaw, userOrderIDRaw})
+	if topOrder.Symbol != "" {
+		side := "B"
+		if topOrder.Side == "ask" {
+			side = "S"
+		}
+
+		response = append(response, []string{"B", side, strconv.Itoa(topOrder.Price), strconv.Itoa(topOrder.Size)})
+	}
+
 	return response, nil
 }
 
@@ -170,7 +179,7 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 		response = append(response, []string{"R", userIDRaw, userOrderIDRaw})
 	} else {
 		response = append(response, []string{"A", userIDRaw, userOrderIDRaw})
-		if topOrder.UserID == userID {
+		if topOrder.Symbol != "" {
 			response = append(response, []string{"B", side, strconv.Itoa(topOrder.Price), strconv.Itoa(topOrder.Size)})
 		}
 	}
@@ -178,13 +187,9 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 	return response, nil
 }
 
-func printHelp() {
-	fmt.Println("\nUsage:\n    book <input.csv> <output.csv>")
-}
-
 func Init(args []string, repos entity.Repositories) error {
 	if len(args) < 3 {
-		printHelp()
+		fmt.Println("\nUsage:\n    book <input.csv> <output.csv>")
 		return nil
 	}
 

@@ -81,6 +81,28 @@ func (repo *repositoryOrder) CreateRequestSell(userOrderID int, userID int, symb
 	return repo.Create(userOrderID, userID, symbol, "ask", price, size)
 }
 
+func (repo *repositoryOrder) GetOrderByID(userOrderID int, userID int) (entity.Order, error) {
+	var symbol string
+	var side string
+	var price int
+	var size int
+	var isOpen int
+	var isCanceled int
+	var createdAt int
+	var updatedAt int
+
+	err := repo.db.db.QueryRow(
+		"SELECT symbol, side, price, size, isopen, iscanceled, createdat, updatedat FROM "+repo.tableName+" WHERE id=$1 AND userid=$2", userOrderID, userID,
+	).Scan(&symbol, &side, &price, &size, &isOpen, &isCanceled, &createdAt, &updatedAt)
+	if err != nil {
+		return entity.Order{}, err
+	}
+
+	order := entity.NewOrder(userOrderID, userID, symbol, side, price, size, isOpen == 1, isCanceled == 1, createdAt, updatedAt)
+
+	return order, nil
+}
+
 func (repo *repositoryOrder) GetSymbolBySide(symbol string, side string) ([]entity.Order, error) {
 	orders := []entity.Order{}
 
@@ -228,16 +250,8 @@ func (repo *repositoryOrder) GetSelling(symbol string) ([]entity.Order, error) {
 	return repo.GetSymbolBySide(symbol, "ask")
 }
 
-func (repo *repositoryOrder) GetSellingTopOrder(symbol string) (entity.Order, error) {
-	return repo.GetTopOrder(symbol, "ask")
-}
-
 func (repo *repositoryOrder) GetBuying(symbol string) ([]entity.Order, error) {
 	return repo.GetSymbolBySide(symbol, "bid")
-}
-
-func (repo *repositoryOrder) GetBuyingTopOrder(symbol string) (entity.Order, error) {
-	return repo.GetTopOrder(symbol, "bid")
 }
 
 func (repo *repositoryOrder) Cancel(userOrderID int, userID int) (bool, error) {

@@ -6,9 +6,28 @@ import (
 
 // TODO: need to setup tests on the domain
 
-func CancelOrder(userOrderID int, userID int, orderRepo entity.RepositoryOrder) error {
-	_, err := orderRepo.Cancel(userOrderID, userID)
-	return err
+func CancelOrder(userOrderID int, userID int, orderRepo entity.RepositoryOrder) (entity.Order, error) {
+	order, err := orderRepo.GetOrderByID(userOrderID, userID)
+	if err != nil {
+		return entity.Order{}, err
+	}
+
+	topOrder, err := orderRepo.GetTopOrder(order.Symbol, order.Side)
+	if err != nil {
+		return entity.Order{}, err
+	}
+
+	_, err = orderRepo.Cancel(userOrderID, userID)
+	if err != nil {
+		return entity.Order{}, err
+	}
+
+	// maybe the top order was updated
+	if topOrder.ID == userOrderID {
+		return orderRepo.GetTopOrder(order.Symbol, order.Side)
+	}
+
+	return entity.Order{}, nil
 }
 
 func FlushAllOrders(orderRepo entity.RepositoryOrder) (bool, error) {
@@ -23,7 +42,7 @@ func RequestBuy(
 	qty int,
 	orderRepo entity.RepositoryOrder,
 ) (topOrder entity.Order, isCrossBook bool, err error) {
-	topSellingOrder, err := orderRepo.GetSellingTopOrder(symbol)
+	topSellingOrder, err := orderRepo.GetTopOrder(symbol, "ask")
 	if err != nil {
 		return topOrder, isCrossBook, err
 	}
@@ -34,14 +53,14 @@ func RequestBuy(
 		return topOrder, isCrossBook, nil
 	}
 
+	// TODO: match and trade
+
 	_, err = orderRepo.CreateRequestBuy(userOrderID, userID, symbol, limitPrice, qty)
 	if err != nil {
 		return topOrder, isCrossBook, err
 	}
 
-	// TODO: match and trade
-
-	topOrder, err = orderRepo.GetBuyingTopOrder(symbol)
+	topOrder, err = orderRepo.GetTopOrder(symbol, "bid")
 	if err != nil {
 		return entity.Order{}, isCrossBook, err
 	}
@@ -62,7 +81,7 @@ func RequestSell(
 	qty int,
 	orderRepo entity.RepositoryOrder,
 ) (topOrder entity.Order, isCrossBook bool, err error) {
-	topBuyingOrder, err := orderRepo.GetBuyingTopOrder(symbol)
+	topBuyingOrder, err := orderRepo.GetTopOrder(symbol, "bid")
 	if err != nil {
 		return topOrder, isCrossBook, err
 	}
@@ -73,14 +92,14 @@ func RequestSell(
 		return topOrder, isCrossBook, nil
 	}
 
+	// TODO: match and trade
+
 	_, err = orderRepo.CreateRequestSell(userOrderID, userID, symbol, limitPrice, qty)
 	if err != nil {
 		return topOrder, isCrossBook, err
 	}
 
-	// TODO: match and trade
-
-	topOrder, err = orderRepo.GetSellingTopOrder(symbol)
+	topOrder, err = orderRepo.GetTopOrder(symbol, "ask")
 	if err != nil {
 		return entity.Order{}, isCrossBook, err
 	}
