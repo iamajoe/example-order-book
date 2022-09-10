@@ -33,3 +33,9 @@ docker run --name orderbooking -v $(pwd)/dockerdata:/data/user orderbook
 go fmt ./...
 go test ./...
 ```
+
+## TODO
+
+- match and trade
+- test domain order
+- more tests overall

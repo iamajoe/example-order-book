@@ -32,7 +32,7 @@ func TestNewOrder(t *testing.T) {
 				ID:         rand.Intn(10000),
 				UserID:     rand.Intn(10000),
 				Symbol:     fmt.Sprintf("tmp_symbol_%d", rand.Intn(10000)),
-				Side:       fmt.Sprintf("tmp_side_%d", rand.Intn(10000)), // TODO: we should enum this
+				Side:       fmt.Sprintf("tmp_side_%d", rand.Intn(10000)),
 				Price:      rand.Int() * 10000,
 				Size:       rand.Int() * 10000,
 				IsOpen:     false,

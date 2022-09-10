@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"os"
 	"testing"
+
+	"github.com/joesantosio/example-order-book/entity"
 )
 
 func Test_repositoryOrder_Create(t *testing.T) {
@@ -99,6 +101,99 @@ func Test_repositoryOrder_Create(t *testing.T) {
 
 			if (got >= 0) != tt.want {
 				t.Errorf("repositoryOrder.Create() = %v, want %v", got >= 0, tt.want)
+			}
+		})
+	}
+}
+
+func Test_repositoryOrder_GetOrderByID(t *testing.T) {
+	path := fmt.Sprintf("tmp_test_%d.db", rand.Intn(10000))
+	db, err := Connect(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	defer os.Remove(path)
+
+	repo, err := createRepositoryOrder(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	type args struct {
+		userOrderID int
+		userID      int
+	}
+	type testStruct struct {
+		name    string
+		args    args
+		want    entity.Order
+		wantErr bool
+	}
+
+	tests := []testStruct{
+		func() testStruct {
+			order := entity.NewOrder(
+				rand.Intn(10000),
+				rand.Intn(10000),
+				fmt.Sprintf("tmp_symbol_%d", rand.Intn(10000)),
+				"buy",
+				rand.Intn(10000),
+				rand.Intn(10000),
+				true,
+				false,
+				rand.Intn(10000),
+				rand.Intn(10000),
+			)
+
+			// prepare the test
+			id, err := repo.Create(
+				order.ID,
+				order.UserID,
+				order.Symbol,
+				order.Side,
+				order.Price,
+				order.Size,
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = repo.Create(
+				rand.Intn(10000),
+				rand.Intn(10000),
+				fmt.Sprintf("tmp_symbol_%d", rand.Intn(10000)),
+				"buy",
+				rand.Intn(10000),
+				rand.Intn(10000),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			return testStruct{
+				name:    "runs",
+				args:    args{userOrderID: id, userID: order.UserID},
+				want:    order,
+				wantErr: false,
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := repo.GetOrderByID(tt.args.userOrderID, tt.args.userID)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("repositoryOrder.GetOrderByID() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if got.ID != tt.want.ID ||
+				got.UserID != tt.want.UserID ||
+				got.Symbol != tt.want.Symbol ||
+				got.Price != tt.want.Price ||
+				got.Size != tt.want.Size ||
+				got.Side != tt.want.Side {
+				t.Errorf("repositoryOrder.GetOrderByID() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -352,7 +447,7 @@ func Test_repositoryOrder_Flush(t *testing.T) {
 	}
 }
 
-func Test_repositoryOrder_RemoveTable(t *testing.T) {
+func Test_repositoryOrder_removeTable(t *testing.T) {
 	path := fmt.Sprintf("tmp_test_%d.db", rand.Intn(10000))
 	db, err := Connect(path)
 	if err != nil {
