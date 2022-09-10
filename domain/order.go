@@ -24,14 +24,24 @@ func CancelOrder(userOrderID int, userID int, orderRepo entity.RepositoryOrder) 
 
 	// maybe the top order was updated
 	if topOrder.ID == userOrderID {
-		return orderRepo.GetTopOrder(order.Symbol, order.Side)
+		topOrder, err = orderRepo.GetTopOrder(order.Symbol, order.Side)
+		if err != nil {
+			return entity.Order{}, err
+		}
+
+		if topOrder.Symbol != "" {
+			return topOrder, nil
+		}
+
+		// isnt there a topOrder? we need to inform
+		return entity.NewOrder(-1, -1, order.Symbol, order.Side, -1, -1, true, false, -1, -1), nil
 	}
 
 	return entity.Order{}, nil
 }
 
 func FlushAllOrders(orderRepo entity.RepositoryOrder) (bool, error) {
-	return orderRepo.Empty()
+	return orderRepo.Flush()
 }
 
 func RequestBuy(
@@ -55,7 +65,7 @@ func RequestBuy(
 
 	// TODO: match and trade
 
-	_, err = orderRepo.CreateRequestBuy(userOrderID, userID, symbol, limitPrice, qty)
+	_, err = orderRepo.Create(userOrderID, userID, symbol, "bid", limitPrice, qty)
 	if err != nil {
 		return topOrder, isCrossBook, err
 	}
@@ -94,7 +104,7 @@ func RequestSell(
 
 	// TODO: match and trade
 
-	_, err = orderRepo.CreateRequestSell(userOrderID, userID, symbol, limitPrice, qty)
+	_, err = orderRepo.Create(userOrderID, userID, symbol, "ask", limitPrice, qty)
 	if err != nil {
 		return topOrder, isCrossBook, err
 	}

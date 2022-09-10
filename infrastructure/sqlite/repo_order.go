@@ -65,22 +65,6 @@ func (repo *repositoryOrder) Create(
 	return id, err
 }
 
-func (repo *repositoryOrder) CreateBuy(userOrderID int, userID int, symbol string, price int, size int) (int, error) {
-	return repo.Create(userOrderID, userID, symbol, "buy", price, size)
-}
-
-func (repo *repositoryOrder) CreateSell(userOrderID int, userID int, symbol string, price int, size int) (int, error) {
-	return repo.Create(userOrderID, userID, symbol, "sell", price, size)
-}
-
-func (repo *repositoryOrder) CreateRequestBuy(userOrderID int, userID int, symbol string, price int, size int) (int, error) {
-	return repo.Create(userOrderID, userID, symbol, "bid", price, size)
-}
-
-func (repo *repositoryOrder) CreateRequestSell(userOrderID int, userID int, symbol string, price int, size int) (int, error) {
-	return repo.Create(userOrderID, userID, symbol, "ask", price, size)
-}
-
 func (repo *repositoryOrder) GetOrderByID(userOrderID int, userID int) (entity.Order, error) {
 	var symbol string
 	var side string
@@ -101,84 +85,6 @@ func (repo *repositoryOrder) GetOrderByID(userOrderID int, userID int) (entity.O
 	order := entity.NewOrder(userOrderID, userID, symbol, side, price, size, isOpen == 1, isCanceled == 1, createdAt, updatedAt)
 
 	return order, nil
-}
-
-func (repo *repositoryOrder) GetSymbolBySide(symbol string, side string) ([]entity.Order, error) {
-	orders := []entity.Order{}
-
-	// make sure the side is valid with what we expect
-	if !getSideValidity(side) {
-		return orders, errors.New("side is invalid")
-	}
-
-	isOpen := getOpenStateBySide(side)
-	rows, err := repo.db.db.Query(
-		"SELECT id, userid, symbol, side, price, size, isopen, iscanceled, createdat, updatedat FROM "+repo.tableName+" WHERE symbol=$1 AND side=$2 AND isopen=$3 AND iscanceled=0 ORDER BY createdat ASC", symbol, side, isOpen,
-	)
-	if err != nil {
-		return orders, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var id int
-		var userID int
-		var symbol string
-		var side string
-		var price int
-		var size int
-		var isOpen int
-		var isCanceled int
-		var createdAt int
-		var updatedAt int
-
-		err = rows.Scan(&id, &userID, &symbol, &side, &price, &size, &isOpen, &isCanceled, &createdAt, &updatedAt)
-		if err != nil {
-			return orders, err
-		}
-
-		order := entity.NewOrder(id, userID, symbol, side, price, size, isOpen == 1, isCanceled == 1, createdAt, updatedAt)
-		orders = append(orders, order)
-	}
-
-	return orders, nil
-}
-
-func (repo *repositoryOrder) GetSymbolBySideAndUser(userID int, symbol string, side string) ([]entity.Order, error) {
-	orders := []entity.Order{}
-
-	// make sure the side is valid with what we expect
-	if !getSideValidity(side) {
-		return orders, errors.New("side is invalid")
-	}
-
-	rows, err := repo.db.db.Query(
-		"SELECT id, price, size, isopen, iscanceled, createdat, updatedat FROM "+repo.tableName+" WHERE symbol=$1 AND side=$2 ORDER BY createdat ASC", symbol, side,
-	)
-	if err != nil {
-		return orders, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var id int
-		var price int
-		var size int
-		var isOpen int
-		var isCanceled int
-		var createdAt int
-		var updatedAt int
-
-		err = rows.Scan(&id, &price, &size, &isOpen, &isCanceled, &createdAt, &updatedAt)
-		if err != nil {
-			return orders, err
-		}
-
-		order := entity.NewOrder(id, userID, symbol, side, price, size, isOpen == 1, isCanceled == 1, createdAt, updatedAt)
-		orders = append(orders, order)
-	}
-
-	return orders, nil
 }
 
 func (repo *repositoryOrder) GetTopOrder(symbol string, side string) (entity.Order, error) {
@@ -246,14 +152,6 @@ func (repo *repositoryOrder) GetTopOrder(symbol string, side string) (entity.Ord
 	return topOrder, nil
 }
 
-func (repo *repositoryOrder) GetSelling(symbol string) ([]entity.Order, error) {
-	return repo.GetSymbolBySide(symbol, "ask")
-}
-
-func (repo *repositoryOrder) GetBuying(symbol string) ([]entity.Order, error) {
-	return repo.GetSymbolBySide(symbol, "bid")
-}
-
 func (repo *repositoryOrder) Cancel(userOrderID int, userID int) (bool, error) {
 	sts := "UPDATE " + repo.tableName + " SET iscanceled=1 WHERE userid=? AND id=?"
 	_, err := repo.db.db.Exec(sts, userID, userOrderID)
@@ -264,7 +162,7 @@ func (repo *repositoryOrder) Cancel(userOrderID int, userID int) (bool, error) {
 	return true, err
 }
 
-func (repo *repositoryOrder) Empty() (bool, error) {
+func (repo *repositoryOrder) Flush() (bool, error) {
 	sts := "DELETE FROM " + repo.tableName
 	_, err := repo.db.db.Exec(sts)
 	return true, err

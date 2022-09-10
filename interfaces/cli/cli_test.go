@@ -6,38 +6,11 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/joesantosio/example-order-book/infrastructure/sqlite"
 )
-
-func Test_readCSVFile(t *testing.T) {
-	type args struct {
-		p string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    [][]string
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := readCSVFile(tt.args.p)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("readCSVFile() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("readCSVFile() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
 func TestInit(t *testing.T) {
 	type args struct {
@@ -110,12 +83,12 @@ func TestInit(t *testing.T) {
 			wantPath: "fixtures/10_output_balanced_book_cancel_behind_best_bid_and_offer.csv",
 			wantErr:  false,
 		},
-		// {
-		// 	name:     "runs: 11_input_balanced_book_cancel_all_bids",
-		// 	args:     []string{"book", "fixtures/11_input_balanced_book_cancel_all_bids.csv"},
-		// 	wantPath: "fixtures/11_output_balanced_book_cancel_all_bids.csv",
-		// 	wantErr:  false,
-		// },
+		{
+			name:     "runs: 11_input_balanced_book_cancel_all_bids",
+			args:     []string{"book", "fixtures/11_input_balanced_book_cancel_all_bids.csv"},
+			wantPath: "fixtures/11_output_balanced_book_cancel_all_bids.csv",
+			wantErr:  false,
+		},
 		// {
 		// 	name:     "runs: 12_input_balanced_book_tob_volume_changes",
 		// 	args:     []string{"book", "fixtures/12_input_balanced_book_tob_volume_changes.csv"},

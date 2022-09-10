@@ -29,14 +29,9 @@ func NewOrder(
 }
 
 type RepositoryOrder interface {
-	CreateBuy(userOrderID int, userID int, symbol string, price int, size int) (int, error)
-	CreateSell(userOrderID int, userID int, symbol string, price int, size int) (int, error)
-	CreateRequestBuy(userOrderID int, userID int, symbol string, price int, size int) (int, error)
-	CreateRequestSell(userOrderID int, userID int, symbol string, price int, size int) (int, error)
+	Create(userOrderID int, userID int, symbol string, side string, price int, size int) (int, error)
 	GetOrderByID(userOrderID int, userID int) (Order, error)
 	GetTopOrder(symbol string, side string) (Order, error)
-	GetSelling(symbol string) ([]Order, error)
-	GetBuying(symbol string) ([]Order, error)
 	Cancel(userOrderID int, userID int) (bool, error)
-	Empty() (bool, error)
+	Flush() (bool, error)
 }

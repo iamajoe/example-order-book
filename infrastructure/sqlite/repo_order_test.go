@@ -268,7 +268,7 @@ func Test_repositoryOrder_Cancel(t *testing.T) {
 	}
 }
 
-func Test_repositoryOrder_Empty(t *testing.T) {
+func Test_repositoryOrder_Flush(t *testing.T) {
 	path := fmt.Sprintf("tmp_test_%d.db", rand.Intn(10000))
 	db, err := Connect(path)
 	if err != nil {
@@ -321,7 +321,7 @@ func Test_repositoryOrder_Empty(t *testing.T) {
 			}
 
 			// run the test
-			got, err := repo.Empty()
+			got, err := repo.Flush()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("repositoryOrder.Cancel() error = %v, wantErr %v", err, tt.wantErr)
 				return
