@@ -38,12 +38,18 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 		return response, err
 	}
 
-	var topOrder entity.Order
 	var isCrossBook bool
+	var oldTopOrder entity.Order
+	var newTopOrder entity.Order
 
 	switch side {
 	case "B":
-		topOrder, isCrossBook, err = domain.RequestBuy(
+		oldTopOrder, err = domain.GetTopOrder(symbol, "bid", repos.GetOrder())
+		if err != nil {
+			return response, err
+		}
+
+		isCrossBook, err = domain.RequestBuy(
 			userOrderID,
 			userID,
 			symbol,
@@ -51,8 +57,18 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 			qty,
 			repos.GetOrder(),
 		)
+
+		newTopOrder, err = domain.GetTopOrder(symbol, "bid", repos.GetOrder())
+		if err != nil {
+			return response, err
+		}
 	case "S":
-		topOrder, isCrossBook, err = domain.RequestSell(
+		oldTopOrder, err = domain.GetTopOrder(symbol, "ask", repos.GetOrder())
+		if err != nil {
+			return response, err
+		}
+
+		isCrossBook, err = domain.RequestSell(
 			userOrderID,
 			userID,
 			symbol,
@@ -60,6 +76,11 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 			qty,
 			repos.GetOrder(),
 		)
+
+		newTopOrder, err = domain.GetTopOrder(symbol, "ask", repos.GetOrder())
+		if err != nil {
+			return response, err
+		}
 	default:
 	}
 
@@ -72,8 +93,8 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 		response = append(response, getRejectResponse(userOrderID, userID))
 	} else {
 		response = append(response, getAcknowledgeResponse(userOrderID, userID))
-		if topOrder.Symbol != "" {
-			response = append(response, getTopOrderResponse(topOrder))
+		if newTopOrder.ID != oldTopOrder.ID || newTopOrder.ID == -1 {
+			response = append(response, getTopOrderResponse(newTopOrder))
 		}
 	}
 

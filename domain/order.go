@@ -6,38 +6,26 @@ import (
 
 // TODO: need to setup tests on the domain
 
-func CancelOrder(userOrderID int, userID int, orderRepo entity.RepositoryOrder) (entity.Order, error) {
-	order, err := orderRepo.GetOrderByID(userOrderID, userID)
+func GetOrderByID(userOrderID int, userID int, orderRepo entity.RepositoryOrder) (entity.Order, error) {
+	return orderRepo.GetOrderByID(userOrderID, userID)
+}
+
+func GetTopOrder(symbol string, side string, orderRepo entity.RepositoryOrder) (entity.Order, error) {
+	order, err := orderRepo.GetTopOrder(symbol, side)
 	if err != nil {
 		return entity.Order{}, err
 	}
 
-	topOrder, err := orderRepo.GetTopOrder(order.Symbol, order.Side)
-	if err != nil {
-		return entity.Order{}, err
+	if order.Symbol == "" {
+		return entity.NewOrder(-1, -1, symbol, side, -1, -1, true, false, -1, -1), nil
 	}
 
-	_, err = orderRepo.Cancel(userOrderID, userID)
-	if err != nil {
-		return entity.Order{}, err
-	}
+	return order, nil
+}
 
-	// maybe the top order was updated
-	if topOrder.ID == userOrderID {
-		topOrder, err = orderRepo.GetTopOrder(order.Symbol, order.Side)
-		if err != nil {
-			return entity.Order{}, err
-		}
-
-		if topOrder.Symbol != "" {
-			return topOrder, nil
-		}
-
-		// isnt there a topOrder? we need to inform
-		return entity.NewOrder(-1, -1, order.Symbol, order.Side, -1, -1, true, false, -1, -1), nil
-	}
-
-	return entity.Order{}, nil
+func CancelOrder(userOrderID int, userID int, orderRepo entity.RepositoryOrder) error {
+	_, err := orderRepo.Cancel(userOrderID, userID)
+	return err
 }
 
 func FlushAllOrders(orderRepo entity.RepositoryOrder) (bool, error) {
@@ -51,36 +39,22 @@ func RequestBuy(
 	limitPrice int,
 	qty int,
 	orderRepo entity.RepositoryOrder,
-) (topOrder entity.Order, isCrossBook bool, err error) {
+) (isCrossBook bool, err error) {
 	topSellingOrder, err := orderRepo.GetTopOrder(symbol, "ask")
 	if err != nil {
-		return topOrder, isCrossBook, err
+		return isCrossBook, err
 	}
 
 	// check if the request will cross book
 	isCrossBook = topSellingOrder.Price != 0 && limitPrice >= topSellingOrder.Price
 	if isCrossBook {
-		return topOrder, isCrossBook, nil
+		return isCrossBook, nil
 	}
 
 	// TODO: match and trade
 
 	_, err = orderRepo.Create(userOrderID, userID, symbol, "bid", limitPrice, qty)
-	if err != nil {
-		return topOrder, isCrossBook, err
-	}
-
-	topOrder, err = orderRepo.GetTopOrder(symbol, "bid")
-	if err != nil {
-		return entity.Order{}, isCrossBook, err
-	}
-
-	// DEV: the count for the TopOrder is done per user
-	if topOrder.UserID != userID {
-		topOrder = entity.Order{}
-	}
-
-	return topOrder, isCrossBook, nil
+	return isCrossBook, err
 }
 
 func RequestSell(
@@ -90,34 +64,20 @@ func RequestSell(
 	limitPrice int,
 	qty int,
 	orderRepo entity.RepositoryOrder,
-) (topOrder entity.Order, isCrossBook bool, err error) {
+) (isCrossBook bool, err error) {
 	topBuyingOrder, err := orderRepo.GetTopOrder(symbol, "bid")
 	if err != nil {
-		return topOrder, isCrossBook, err
+		return isCrossBook, err
 	}
 
 	// check if the request will cross book
 	isCrossBook = topBuyingOrder.Price != 0 && limitPrice <= topBuyingOrder.Price
 	if isCrossBook {
-		return topOrder, isCrossBook, nil
+		return isCrossBook, nil
 	}
 
 	// TODO: match and trade
 
 	_, err = orderRepo.Create(userOrderID, userID, symbol, "ask", limitPrice, qty)
-	if err != nil {
-		return topOrder, isCrossBook, err
-	}
-
-	topOrder, err = orderRepo.GetTopOrder(symbol, "ask")
-	if err != nil {
-		return entity.Order{}, isCrossBook, err
-	}
-
-	// DEV: the count for the TopOrder is done per user
-	if topOrder.UserID != userID {
-		topOrder = entity.Order{}
-	}
-
-	return topOrder, isCrossBook, nil
+	return isCrossBook, err
 }

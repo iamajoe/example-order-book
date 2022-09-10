@@ -89,12 +89,12 @@ func TestInit(t *testing.T) {
 			wantPath: "fixtures/11_output_balanced_book_cancel_all_bids.csv",
 			wantErr:  false,
 		},
-		// {
-		// 	name:     "runs: 12_input_balanced_book_tob_volume_changes",
-		// 	args:     []string{"book", "fixtures/12_input_balanced_book_tob_volume_changes.csv"},
-		// 	wantPath: "fixtures/12_output_balanced_book_tob_volume_changes.csv",
-		// 	wantErr:  false,
-		// },
+		{
+			name:     "runs: 12_input_balanced_book_tob_volume_changes",
+			args:     []string{"book", "fixtures/12_input_balanced_book_tob_volume_changes.csv"},
+			wantPath: "fixtures/12_output_balanced_book_tob_volume_changes.csv",
+			wantErr:  false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -124,8 +124,7 @@ func TestInit(t *testing.T) {
 				// check if the output exists
 				_, err = os.Stat(resultPath)
 				if err == nil {
-					// TODO: uncomment after making sure all is as expected
-					// defer os.Remove(resultPath)
+					defer os.Remove(resultPath)
 
 					// check the output data
 					buf, err := ioutil.ReadFile(resultPath)
