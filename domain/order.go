@@ -4,8 +4,6 @@ import (
 	"github.com/joesantosio/example-order-book/entity"
 )
 
-// TODO: need to setup tests on the domain
-
 func GetOrderByID(userOrderID int, userID int, orderRepo entity.RepositoryOrder) (entity.Order, error) {
 	return orderRepo.GetOrderByID(userOrderID, userID)
 }
@@ -40,13 +38,13 @@ func RequestBuy(
 	qty int,
 	orderRepo entity.RepositoryOrder,
 ) (isCrossBook bool, err error) {
-	topSellingOrder, err := orderRepo.GetTopOrder(symbol, "ask")
+	otherSideTopOrder, err := orderRepo.GetTopOrder(symbol, "ask")
 	if err != nil {
 		return isCrossBook, err
 	}
 
 	// check if the request will cross book
-	isCrossBook = topSellingOrder.Price != 0 && limitPrice >= topSellingOrder.Price
+	isCrossBook = otherSideTopOrder.Price != 0 && limitPrice >= otherSideTopOrder.Price
 	if isCrossBook {
 		return isCrossBook, nil
 	}
@@ -65,13 +63,13 @@ func RequestSell(
 	qty int,
 	orderRepo entity.RepositoryOrder,
 ) (isCrossBook bool, err error) {
-	topBuyingOrder, err := orderRepo.GetTopOrder(symbol, "bid")
+	otherSideTopOrder, err := orderRepo.GetTopOrder(symbol, "bid")
 	if err != nil {
 		return isCrossBook, err
 	}
 
 	// check if the request will cross book
-	isCrossBook = topBuyingOrder.Price != 0 && limitPrice <= topBuyingOrder.Price
+	isCrossBook = otherSideTopOrder.Price != 0 && limitPrice <= otherSideTopOrder.Price
 	if isCrossBook {
 		return isCrossBook, nil
 	}

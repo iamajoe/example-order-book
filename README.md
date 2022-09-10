@@ -1,16 +1,11 @@
 # Example order book
 
-## Install dependencies
-
-```sh
-go mod download
-```
-
 ## Run
 
 ### Locally
 
 ```sh
+go mod download
 go build -o ./bin/book; \
 DB_PATH=bin/data.sqlite ./bin/book <input.csv> <output.csv>
 ```
@@ -36,6 +31,11 @@ go test ./...
 
 ## TODO
 
+- "top of book" should be saved on the repository (easier / faster fetch)
 - match and trade
 - test domain order
 - more tests overall
+
+## Notes
+
+- Used a pattern based on DDD so that the code is more readable and manageable

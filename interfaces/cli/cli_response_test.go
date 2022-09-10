@@ -75,6 +75,61 @@ func Test_getAcknowledgeResponse(t *testing.T) {
 	}
 }
 
+func Test_getTradeAcknowledgeResponse(t *testing.T) {
+	type args struct {
+		userIDBuy       int
+		userOrderIDBuy  int
+		userIDSell      int
+		userOrderIDSell int
+		price           int
+		quantity        int
+	}
+	type testStruct struct {
+		name string
+		args args
+		want []string
+	}
+
+	tests := []testStruct{
+		func() testStruct {
+			userIDBuy := rand.Intn(10000)
+			userOrderIDBuy := rand.Intn(10000)
+			userIDSell := rand.Intn(10000)
+			userOrderIDSell := rand.Intn(10000)
+			price := rand.Intn(10000)
+			quantity := rand.Intn(10000)
+
+			return testStruct{
+				name: "runs",
+				args: args{
+					userIDBuy,
+					userOrderIDBuy,
+					userIDSell,
+					userOrderIDSell,
+					price,
+					quantity,
+				},
+				want: []string{
+					"T",
+					strconv.Itoa(userIDBuy),
+					strconv.Itoa(userOrderIDBuy),
+					strconv.Itoa(userIDSell),
+					strconv.Itoa(userOrderIDSell),
+					strconv.Itoa(price),
+					strconv.Itoa(quantity),
+				},
+			}
+		}(),
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getTradeAcknowledgeResponse(tt.args.userIDBuy, tt.args.userOrderIDBuy, tt.args.userIDSell, tt.args.userOrderIDSell, tt.args.price, tt.args.quantity); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getTradeAcknowledgeResponse() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func Test_getTopOrderResponse(t *testing.T) {
 	type args struct {
 		order entity.Order

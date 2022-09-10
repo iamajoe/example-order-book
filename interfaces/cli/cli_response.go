@@ -18,6 +18,25 @@ func getAcknowledgeResponse(userOrderID int, userID int) []string {
 	return []string{"A", strconv.Itoa(userID), strconv.Itoa(userOrderID)}
 }
 
+func getTradeAcknowledgeResponse(
+	userIDBuy int,
+	userOrderIDBuy int,
+	userIDSell int,
+	userOrderIDSell int,
+	price int,
+	quantity int,
+) []string {
+	return []string{
+		"T",
+		strconv.Itoa(userIDBuy),
+		strconv.Itoa(userOrderIDBuy),
+		strconv.Itoa(userIDSell),
+		strconv.Itoa(userOrderIDSell),
+		strconv.Itoa(price),
+		strconv.Itoa(quantity),
+	}
+}
+
 func getTopOrderResponse(order entity.Order) []string {
 	side := order.Side
 	if order.Side == "ask" {

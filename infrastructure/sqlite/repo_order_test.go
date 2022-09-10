@@ -230,7 +230,6 @@ func Test_repositoryOrder_GetTopOrder(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// prepare the test
-
 			_, err := repo.Create(rand.Intn(10000), rand.Intn(10000), symbolA, tt.args.side, rand.Intn(10000), rand.Intn(10000))
 			if err != nil {
 				t.Fatal(err)
