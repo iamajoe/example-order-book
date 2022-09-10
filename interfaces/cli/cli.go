@@ -161,6 +161,10 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 	default:
 	}
 
+	if err != nil {
+		return response, err
+	}
+
 	// handle the response
 	if isCrossBook {
 		response = append(response, []string{"R", userIDRaw, userOrderIDRaw})

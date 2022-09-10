@@ -39,7 +39,7 @@ func (repo *repositoryOrder) Create(
 	price int,
 	size int,
 ) (int, error) {
-	timeNow := time.Now().Unix()
+	timeNow := time.Now().UnixMilli()
 
 	// make sure the side is valid with what we expect
 	if !getSideValidity(side) {
@@ -131,7 +131,7 @@ func (repo *repositoryOrder) GetSymbolBySideAndUser(userID int, symbol string, s
 	}
 
 	rows, err := repo.db.db.Query(
-		"SELECT id, price, size, isopen, iscanceled, createdat, updatedat FROM "+repo.tableName+" WHERE symbol=$1 AND side=$2 AND ORDER BY createdat ASC", symbol, side,
+		"SELECT id, price, size, isopen, iscanceled, createdat, updatedat FROM "+repo.tableName+" WHERE symbol=$1 AND side=$2 ORDER BY createdat ASC", symbol, side,
 	)
 	if err != nil {
 		return orders, err
@@ -193,7 +193,11 @@ func (repo *repositoryOrder) GetTopOrder(symbol string, side string) (entity.Ord
 				continue
 			}
 
-			order.Size = order.Size + size
+			// update the size if the price hasnt been updated
+			if order.Price == price {
+				order.Size = order.Size + size
+			}
+
 			found = true
 			break
 		}
@@ -218,30 +222,6 @@ func (repo *repositoryOrder) GetTopOrder(symbol string, side string) (entity.Ord
 	}
 
 	return topOrder, nil
-
-	// var id int
-	// var userID int
-	// var price int
-	// var size int
-	// var isOpen int
-	// var isCanceled int
-	// var createdAt int
-	// var updatedAt int
-
-	// err := repo.db.db.QueryRow(sts, symbol, side).Scan(
-	// 	&id, &userID, &price, &size, &isOpen, &isCanceled, &createdAt, &updatedAt,
-	// )
-	// if err != nil {
-	// 	if err == sql.ErrNoRows {
-	// 		return entity.Order{}, nil
-	// 	}
-
-	// 	return entity.Order{}, err
-	// }
-
-	// order := entity.NewOrder(id, userID, symbol, side, price, size, isOpen == 1, isCanceled == 1, createdAt, updatedAt)
-
-	// return order, nil
 }
 
 func (repo *repositoryOrder) GetSelling(symbol string) ([]entity.Order, error) {
