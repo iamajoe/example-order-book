@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/joesantosio/example-go-project/config"
+	"github.com/joesantosio/example-order-book/config"
 	"github.com/joesantosio/example-order-book/entity"
 	"github.com/joesantosio/example-order-book/infrastructure/sqlite"
 	"github.com/joesantosio/example-order-book/interfaces/cli"

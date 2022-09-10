@@ -9,15 +9,10 @@ import (
 type repositories struct {
 	db    *DB
 	order entity.RepositoryOrder
-	stock entity.RepositoryStock
 }
 
 func (r *repositories) GetOrder() entity.RepositoryOrder {
 	return r.order
-}
-
-func (r *repositories) GetStock() entity.RepositoryStock {
-	return r.stock
 }
 
 func (r *repositories) Close() error {
@@ -43,10 +38,5 @@ func InitRepos(db *DB) (repos entity.Repositories, err error) {
 		return repos, err
 	}
 
-	stock, err := createRepositoryStock(db)
-	if err != nil {
-		return repos, err
-	}
-
-	return &repositories{db, order, stock}, nil
+	return &repositories{db, order}, nil
 }

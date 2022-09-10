@@ -37,12 +37,51 @@ func Test_repositoryOrder_Create(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "runs",
+			name: "runs with ask",
 			args: args{
 				userOrderID: rand.Intn(10000),
 				userID:      rand.Intn(10000),
 				symbol:      fmt.Sprintf("tmp_symbol_%d", rand.Intn(10000)),
-				side:        fmt.Sprintf("tmp_side_%d", rand.Intn(10000)), // TODO: we should enum this
+				side:        "ask",
+				price:       rand.Int() * 10000,
+				size:        rand.Int() * 10000,
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name: "runs with bid",
+			args: args{
+				userOrderID: rand.Intn(10000),
+				userID:      rand.Intn(10000),
+				symbol:      fmt.Sprintf("tmp_symbol_%d", rand.Intn(10000)),
+				side:        "bid",
+				price:       rand.Int() * 10000,
+				size:        rand.Int() * 10000,
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name: "runs with sell",
+			args: args{
+				userOrderID: rand.Intn(10000),
+				userID:      rand.Intn(10000),
+				symbol:      fmt.Sprintf("tmp_symbol_%d", rand.Intn(10000)),
+				side:        "sell",
+				price:       rand.Int() * 10000,
+				size:        rand.Int() * 10000,
+			},
+			want:    true,
+			wantErr: false,
+		},
+		{
+			name: "runs with buy",
+			args: args{
+				userOrderID: rand.Intn(10000),
+				userID:      rand.Intn(10000),
+				symbol:      fmt.Sprintf("tmp_symbol_%d", rand.Intn(10000)),
+				side:        "buy",
 				price:       rand.Int() * 10000,
 				size:        rand.Int() * 10000,
 			},
@@ -60,6 +99,78 @@ func Test_repositoryOrder_Create(t *testing.T) {
 
 			if (got >= 0) != tt.want {
 				t.Errorf("repositoryOrder.Create() = %v, want %v", got >= 0, tt.want)
+			}
+		})
+	}
+}
+
+func Test_repositoryOrder_GetTopOrder(t *testing.T) {
+	path := fmt.Sprintf("tmp_test_%d.db", rand.Intn(10000))
+	db, err := Connect(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	defer os.Remove(path)
+
+	repo, err := createRepositoryOrder(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	symbolA := fmt.Sprintf("tmp_symbol_%d", rand.Intn(10000))
+	symbolB := fmt.Sprintf("tmp_symbol_%d", rand.Intn(10000))
+
+	type args struct {
+		symbol string
+		side   string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{"runs", args{symbolA, "bid"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// prepare the test
+
+			_, err := repo.Create(rand.Intn(10000), rand.Intn(10000), symbolA, tt.args.side, rand.Intn(10000), rand.Intn(10000))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = repo.Create(rand.Intn(10000), rand.Intn(10000), symbolA, tt.args.side, rand.Intn(10000), rand.Intn(10000))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = repo.Create(rand.Intn(10000), rand.Intn(10000), symbolB, tt.args.side, rand.Intn(10000), rand.Intn(10000))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// run the test
+			got, err := repo.GetTopOrder(tt.args.symbol, tt.args.side)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("repositoryOrder.GetTopOrder() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if got.Price == 0 {
+				t.Errorf("repositoryOrder.GetTopOrder() = %v, want %v", got.Price, "not 0")
+				return
+			}
+
+			if got.Symbol != tt.args.symbol {
+				t.Errorf("repositoryOrder.GetTopOrder() = %v, want %v", got.Symbol, tt.args.symbol)
+				return
+			}
+
+			if got.Side != tt.args.side {
+				t.Errorf("repositoryOrder.GetTopOrder() = %v, want %v", got.Side, tt.args.side)
+				return
 			}
 		})
 	}
@@ -103,7 +214,7 @@ func Test_repositoryOrder_Cancel(t *testing.T) {
 				rand.Intn(10000),
 				tt.args.userID,
 				fmt.Sprintf("tmp_symbol_%d", rand.Intn(10000)),
-				fmt.Sprintf("tmp_side_%d", rand.Intn(10000)),
+				"buy",
 				rand.Intn(10000),
 				rand.Intn(10000),
 			)
@@ -115,7 +226,7 @@ func Test_repositoryOrder_Cancel(t *testing.T) {
 				tt.args.userOrderID,
 				tt.args.userID,
 				fmt.Sprintf("tmp_symbol_%d", rand.Intn(10000)),
-				fmt.Sprintf("tmp_side_%d", rand.Intn(10000)),
+				"buy",
 				rand.Intn(10000),
 				rand.Intn(10000),
 			)
@@ -134,30 +245,24 @@ func Test_repositoryOrder_Cancel(t *testing.T) {
 			}
 
 			// check if anything on the db
-			ids := []int{}
-
-			rows, err := repo.db.db.Query("SELECT id FROM "+repo.tableName+" WHERE userid=$1", tt.args.userID)
+			rows, err := repo.db.db.Query(
+				"SELECT iscanceled FROM "+repo.tableName+" WHERE userid=$1 AND id=$2", tt.args.userID, tt.args.userOrderID,
+			)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer rows.Close()
 
 			for rows.Next() {
-				var id int
-				err = rows.Scan(&id)
+				var isCanceled int
+				err = rows.Scan(&isCanceled)
 				if err != nil {
 					t.Fatal(err)
 				}
 
-				if id == tt.args.userOrderID {
-					t.Fatal(errors.New("id should have been removed"))
+				if isCanceled != 1 {
+					t.Errorf("row cancel = %v, want %v", 1, isCanceled)
 				}
-
-				ids = append(ids, id)
-			}
-
-			if len(ids) > 1 || ids[0] == tt.args.userOrderID {
-				t.Errorf("rows length = %v, want %v", len(ids), 1)
 			}
 		})
 	}
@@ -195,7 +300,7 @@ func Test_repositoryOrder_Empty(t *testing.T) {
 				rand.Intn(10000),
 				rand.Intn(10000),
 				fmt.Sprintf("tmp_symbol_%d", rand.Intn(10000)),
-				fmt.Sprintf("tmp_side_%d", rand.Intn(10000)),
+				"buy",
 				rand.Intn(10000),
 				rand.Intn(10000),
 			)
@@ -207,7 +312,7 @@ func Test_repositoryOrder_Empty(t *testing.T) {
 				rand.Intn(10000),
 				rand.Intn(10000),
 				fmt.Sprintf("tmp_symbol_%d", rand.Intn(10000)),
-				fmt.Sprintf("tmp_side_%d", rand.Intn(10000)),
+				"buy",
 				rand.Intn(10000),
 				rand.Intn(10000),
 			)

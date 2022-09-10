@@ -58,57 +58,55 @@ func writeCSVFile(p string, records [][]string) error {
 	return nil
 }
 
-func printHelp() {
-	fmt.Println("\nUsage:\n    book <input.csv> <output.csv>")
-}
-
-func flushAllOrders(responseCh chan []string, errCh chan error, record []string, repos entity.Repositories) {
+func flushAllOrders(record []string, repos entity.Repositories) ([][]string, error) {
 	// F
+	response := [][]string{}
+
 	_, err := domain.FlushAllOrders(repos.GetOrder())
 	if err != nil {
-		errCh <- err
-		return
+		return response, err
 	}
 
-	// TODO: what to send in a success??
-	responseCh <- []string{}
+	// DEV: we don't want the flush on the final output
+	// response = append(response, []string{"F"})
+	return response, nil
 }
 
-func cancelOrder(responseCh chan []string, errCh chan error, record []string, repos entity.Repositories) {
+func cancelOrder(record []string, repos entity.Repositories) ([][]string, error) {
 	// C, user(int),userOrderId(int)
+	response := [][]string{}
+
 	if len(record) < 2 {
-		responseCh <- []string{}
-		return
+		return response, nil
 	}
 
 	userIDRaw := record[1]
 	userID, err := strconv.Atoi(userIDRaw)
 	if err != nil {
-		errCh <- err
-		return
+		return response, err
 	}
 
 	userOrderIDRaw := record[2]
 	userOrderID, err := strconv.Atoi(userOrderIDRaw)
 	if err != nil {
-		errCh <- err
-		return
+		return response, err
 	}
 
 	err = domain.CancelOrder(userOrderID, userID, repos.GetOrder())
 	if err != nil {
-		errCh <- err
-		return
+		return response, err
 	}
 
-	responseCh <- []string{"A", userIDRaw, userOrderIDRaw}
+	response = append(response, []string{"A", userIDRaw, userOrderIDRaw})
+	return response, nil
 }
 
-func newOrder(responseCh chan []string, errCh chan error, record []string, repos entity.Repositories) {
+func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
+	response := [][]string{}
+
 	// N, user(int),symbol(string),price(int),qty(int),side(char B or S),userOrderId(int)
 	if len(record) < 7 {
-		responseCh <- []string{}
-		return
+		return response, nil
 	}
 
 	symbol := record[2]
@@ -117,65 +115,68 @@ func newOrder(responseCh chan []string, errCh chan error, record []string, repos
 	userIDRaw := record[1]
 	userID, err := strconv.Atoi(userIDRaw)
 	if err != nil {
-		errCh <- err
-		return
+		return response, err
 	}
 
 	price, err := strconv.Atoi(record[3])
 	if err != nil {
-		errCh <- err
-		return
+		return response, err
 	}
 
 	qty, err := strconv.Atoi(record[4])
 	if err != nil {
-		errCh <- err
-		return
+		return response, err
 	}
 
 	userOrderIDRaw := record[6]
 	userOrderID, err := strconv.Atoi(userOrderIDRaw)
 	if err != nil {
-		errCh <- err
-		return
+		return response, err
 	}
 
 	switch side {
 	case "B":
-		_, err = domain.RequestBuy(
+		topOrder, err := domain.RequestBuy(
 			userOrderID,
 			userID,
 			symbol,
 			price,
 			qty,
 			repos.GetOrder(),
-			repos.GetStock(),
 		)
 		if err != nil {
-			errCh <- err
-			return
+			return response, err
 		}
 
-		responseCh <- []string{"A", userIDRaw, userOrderIDRaw}
+		response = append(response, []string{"A", userIDRaw, userOrderIDRaw})
+		if topOrder.ID == userOrderID {
+			response = append(response, []string{"B", "B", strconv.Itoa(topOrder.Price), strconv.Itoa(topOrder.Size)})
+		}
 	case "S":
-		_, err = domain.RequestSell(
+		topOrder, err := domain.RequestSell(
 			userOrderID,
 			userID,
 			symbol,
 			price,
 			qty,
 			repos.GetOrder(),
-			repos.GetStock(),
 		)
 		if err != nil {
-			errCh <- err
-			return
+			return response, err
 		}
 
-		responseCh <- []string{"A", userIDRaw, userOrderIDRaw}
+		response = append(response, []string{"A", userIDRaw, userOrderIDRaw})
+		if topOrder.ID == userOrderID {
+			response = append(response, []string{"B", "S", strconv.Itoa(topOrder.Price), strconv.Itoa(topOrder.Size)})
+		}
 	default:
-		responseCh <- []string{}
 	}
+
+	return response, nil
+}
+
+func printHelp() {
+	fmt.Println("\nUsage:\n    book <input.csv> <output.csv>")
 }
 
 func Init(args []string, repos entity.Repositories) error {
@@ -184,55 +185,48 @@ func Init(args []string, repos entity.Repositories) error {
 		return nil
 	}
 
+	fmt.Printf("\nRunning with:\n    input: '%s'\n    output '%s'\n", args[1], args[2])
+
 	records, err := readCSVFile(args[1])
 	if err != nil {
 		return err
 	}
 
-	responseCh := make(chan []string, len(records))
-	errCh := make(chan error, 1)
+	response := [][]string{}
 
 	for _, record := range records {
 		// ignore empty lines
 		if len(record) < 1 {
-			responseCh <- []string{}
 			continue
 		}
 
 		switch record[0] {
 		case "N":
-			go newOrder(responseCh, errCh, record, repos)
-		case "C":
-			go cancelOrder(responseCh, errCh, record, repos)
-		case "F":
-			go flushAllOrders(responseCh, errCh, record, repos)
-		}
-	}
-
-	// wait for all to go through...
-	var resArr [][]string
-	for {
-		shouldBreak := false
-
-		select {
-		case res := <-responseCh:
-			resArr = append(resArr, res)
-			if len(resArr) == len(records) {
-				shouldBreak = true
-				close(responseCh)
+			res, err := newOrder(record, repos)
+			if err != nil {
+				return err
 			}
-		case err := <-errCh:
-			close(errCh)
-			return err
-		}
 
-		if shouldBreak {
-			break
+			response = append(response, res...)
+		case "C":
+			res, err := cancelOrder(record, repos)
+			if err != nil {
+				return err
+			}
+
+			response = append(response, res...)
+		case "F":
+			res, err := flushAllOrders(record, repos)
+			if err != nil {
+				return err
+			}
+
+			response = append(response, res...)
 		}
 	}
 
 	// ... and save
-	err = writeCSVFile(args[2], resArr)
+	err = writeCSVFile(args[2], response)
 
 	return err
 }

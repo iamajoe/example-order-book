@@ -1,22 +1,35 @@
-# Example Order book
+# Example order book
 
-## Install
+## Install dependencies
 
-```go
+```sh
 go mod download
 ```
 
 ## Run
 
-```goa
+### Locally
+
+```sh
 go build -o ./bin/book; \
-DB_PATH=bin/data.sqlite ./bin/book <userID> <new|cancel|flush> [input.csv]
+DB_PATH=bin/data.sqlite ./bin/book <input.csv> <output.csv>
+```
+
+### Docker
+
+```sh
+docker build  -t orderbook .
+
+# create the folder with the input
+mkdir -p ./dockerdata
+cp -rf interfaces/cli/fixtures/1_input_balanced_book.csv ./dockerdata/input.csv
+
+docker run --name orderbooking -v $(pwd)/dockerdata:/data/user orderbook
 ```
 
 ## Test
 
-```
-go fmt
-go vet
-go test
+```sh
+go fmt ./...
+go test ./...
 ```
