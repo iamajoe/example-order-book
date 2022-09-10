@@ -1,0 +1,6 @@
+github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
+github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/joesantosio/example-go-project v0.0.0-20220910084628-a7d280baeeb2 h1:DNWROuTzSLH7dcvgSkNUuRYPN/DNdJOCjY8qrtBQw50=
+github.com/joesantosio/example-go-project v0.0.0-20220910084628-a7d280baeeb2/go.mod h1:/hBsvvcmi5OrDh4vxh7QFrs85YYZQCYYHrdHWJxa2DY=
+github.com/mattn/go-sqlite3 v1.14.15 h1:vfoHhTN1af61xCRSWzFIWzx2YskyMTwHLrExkBOjvxI=
+github.com/mattn/go-sqlite3 v1.14.15/go.mod h1:2eHXhiwb8IkHr+BDWZGa96P6+rkvnG63S2DGjv9HUNg=
