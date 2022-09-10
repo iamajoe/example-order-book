@@ -122,24 +122,24 @@ func (repo *repositoryOrder) GetSymbolBySide(symbol string, side string) ([]enti
 	return orders, nil
 }
 
-func (repo *repositoryOrder) GetTopOrder(symbol string, side string) (entity.Order, error) {
-	order := "DESC"
-	if side == "ask" {
-		order = "ASC"
-	}
-	sts := "SELECT id, userid, symbol, side, price, size, isopen, iscanceled, createdat, updatedat FROM " + repo.tableName + " WHERE symbol=$1 AND side=$2 AND isopen=1 AND iscanceled=0 ORDER BY price " + order + " LIMIT 1"
+func (repo *repositoryOrder) GetSymbolBySideAndUser(userID int, symbol string, side string) ([]entity.Order, error) {
+	orders := []entity.Order{}
 
-	rows, err := repo.db.db.Query(sts, symbol, side)
+	// make sure the side is valid with what we expect
+	if !getSideValidity(side) {
+		return orders, errors.New("side is invalid")
+	}
+
+	rows, err := repo.db.db.Query(
+		"SELECT id, price, size, isopen, iscanceled, createdat, updatedat FROM "+repo.tableName+" WHERE symbol=$1 AND side=$2 AND ORDER BY createdat ASC", symbol, side,
+	)
 	if err != nil {
-		return entity.Order{}, err
+		return orders, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var id int
-		var userID int
-		var symbol string
-		var side string
 		var price int
 		var size int
 		var isOpen int
@@ -147,16 +147,101 @@ func (repo *repositoryOrder) GetTopOrder(symbol string, side string) (entity.Ord
 		var createdAt int
 		var updatedAt int
 
-		err = rows.Scan(&id, &userID, &symbol, &side, &price, &size, &isOpen, &isCanceled, &createdAt, &updatedAt)
+		err = rows.Scan(&id, &price, &size, &isOpen, &isCanceled, &createdAt, &updatedAt)
+		if err != nil {
+			return orders, err
+		}
+
+		order := entity.NewOrder(id, userID, symbol, side, price, size, isOpen == 1, isCanceled == 1, createdAt, updatedAt)
+		orders = append(orders, order)
+	}
+
+	return orders, nil
+}
+
+func (repo *repositoryOrder) GetTopOrder(symbol string, side string) (entity.Order, error) {
+	rows, err := repo.db.db.Query(
+		"SELECT id, userid, price, size, isopen, iscanceled, createdat, updatedat FROM "+repo.tableName+" WHERE symbol=$1 AND side=$2 AND isopen=1 AND iscanceled=0 ORDER BY createdat DESC",
+		symbol, side,
+	)
+	if err != nil {
+		return entity.Order{}, err
+	}
+	defer rows.Close()
+
+	userOrders := []*entity.Order{}
+
+	for rows.Next() {
+		var id int
+		var userID int
+		var price int
+		var size int
+		var isOpen int
+		var isCanceled int
+		var createdAt int
+		var updatedAt int
+
+		err = rows.Scan(&id, &userID, &price, &size, &isOpen, &isCanceled, &createdAt, &updatedAt)
 		if err != nil {
 			return entity.Order{}, err
 		}
 
-		order := entity.NewOrder(id, userID, symbol, side, price, size, isOpen == 1, isCanceled == 1, createdAt, updatedAt)
-		return order, nil
+		// check if we already have a user
+		found := false
+		for _, order := range userOrders {
+			if order.UserID != userID {
+				continue
+			}
+
+			order.Size = order.Size + size
+			found = true
+			break
+		}
+
+		// create
+		if !found {
+			order := entity.NewOrder(id, userID, symbol, side, price, size, isOpen == 1, isCanceled == 1, createdAt, updatedAt)
+			userOrders = append(userOrders, &order)
+		}
 	}
 
-	return entity.Order{}, nil
+	// go find the top order for the side
+	topOrder := entity.Order{}
+	for _, order := range userOrders {
+		if topOrder.Symbol == "" ||
+			side == "ask" && order.Price < topOrder.Price ||
+			side == "ask" && order.Price == topOrder.Price && order.Size > topOrder.Size ||
+			side == "bid" && order.Price > topOrder.Price ||
+			side == "bid" && order.Price == topOrder.Price && order.Size > topOrder.Size {
+			topOrder = *order
+		}
+	}
+
+	return topOrder, nil
+
+	// var id int
+	// var userID int
+	// var price int
+	// var size int
+	// var isOpen int
+	// var isCanceled int
+	// var createdAt int
+	// var updatedAt int
+
+	// err := repo.db.db.QueryRow(sts, symbol, side).Scan(
+	// 	&id, &userID, &price, &size, &isOpen, &isCanceled, &createdAt, &updatedAt,
+	// )
+	// if err != nil {
+	// 	if err == sql.ErrNoRows {
+	// 		return entity.Order{}, nil
+	// 	}
+
+	// 	return entity.Order{}, err
+	// }
+
+	// order := entity.NewOrder(id, userID, symbol, side, price, size, isOpen == 1, isCanceled == 1, createdAt, updatedAt)
+
+	// return order, nil
 }
 
 func (repo *repositoryOrder) GetSelling(symbol string) ([]entity.Order, error) {

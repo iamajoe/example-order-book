@@ -118,12 +118,14 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 		return response, err
 	}
 
-	price, err := strconv.Atoi(record[3])
+	priceRaw := record[3]
+	price, err := strconv.Atoi(priceRaw)
 	if err != nil {
 		return response, err
 	}
 
-	qty, err := strconv.Atoi(record[4])
+	qtyRaw := record[4]
+	qty, err := strconv.Atoi(qtyRaw)
 	if err != nil {
 		return response, err
 	}
@@ -134,9 +136,12 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 		return response, err
 	}
 
+	var topOrder entity.Order
+	var isCrossBook bool
+
 	switch side {
 	case "B":
-		topOrder, err := domain.RequestBuy(
+		topOrder, isCrossBook, err = domain.RequestBuy(
 			userOrderID,
 			userID,
 			symbol,
@@ -144,16 +149,8 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 			qty,
 			repos.GetOrder(),
 		)
-		if err != nil {
-			return response, err
-		}
-
-		response = append(response, []string{"A", userIDRaw, userOrderIDRaw})
-		if topOrder.ID == userOrderID {
-			response = append(response, []string{"B", "B", strconv.Itoa(topOrder.Price), strconv.Itoa(topOrder.Size)})
-		}
 	case "S":
-		topOrder, err := domain.RequestSell(
+		topOrder, isCrossBook, err = domain.RequestSell(
 			userOrderID,
 			userID,
 			symbol,
@@ -161,15 +158,17 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 			qty,
 			repos.GetOrder(),
 		)
-		if err != nil {
-			return response, err
-		}
-
-		response = append(response, []string{"A", userIDRaw, userOrderIDRaw})
-		if topOrder.ID == userOrderID {
-			response = append(response, []string{"B", "S", strconv.Itoa(topOrder.Price), strconv.Itoa(topOrder.Size)})
-		}
 	default:
+	}
+
+	// handle the response
+	if isCrossBook {
+		response = append(response, []string{"R", userIDRaw, userOrderIDRaw})
+	} else {
+		response = append(response, []string{"A", userIDRaw, userOrderIDRaw})
+		if topOrder.UserID == userID {
+			response = append(response, []string{"B", side, strconv.Itoa(topOrder.Price), strconv.Itoa(topOrder.Size)})
+		}
 	}
 
 	return response, nil

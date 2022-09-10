@@ -22,25 +22,36 @@ func RequestBuy(
 	limitPrice int,
 	qty int,
 	orderRepo entity.RepositoryOrder,
-) (entity.Order, error) {
-	id, err := orderRepo.CreateRequestBuy(userOrderID, userID, symbol, limitPrice, qty)
+) (topOrder entity.Order, isCrossBook bool, err error) {
+	topSellingOrder, err := orderRepo.GetSellingTopOrder(symbol)
 	if err != nil {
-		return entity.Order{}, err
+		return topOrder, isCrossBook, err
 	}
 
-	// TODO: still missing stuff
-	// TODO: what is crossed?! need that for rejections
+	// check if the request will cross book
+	isCrossBook = topSellingOrder.Price != 0 && limitPrice >= topSellingOrder.Price
+	if isCrossBook {
+		return topOrder, isCrossBook, nil
+	}
 
-	topOrder, err := orderRepo.GetBuyingTopOrder(symbol)
+	_, err = orderRepo.CreateRequestBuy(userOrderID, userID, symbol, limitPrice, qty)
 	if err != nil {
-		return entity.Order{}, err
+		return topOrder, isCrossBook, err
 	}
 
-	if topOrder.ID != id {
-		return entity.Order{}, nil
+	// TODO: match and trade
+
+	topOrder, err = orderRepo.GetBuyingTopOrder(symbol)
+	if err != nil {
+		return entity.Order{}, isCrossBook, err
 	}
 
-	return topOrder, nil
+	// DEV: the count for the TopOrder is done per user
+	if topOrder.UserID != userID {
+		topOrder = entity.Order{}
+	}
+
+	return topOrder, isCrossBook, nil
 }
 
 func RequestSell(
@@ -50,23 +61,34 @@ func RequestSell(
 	limitPrice int,
 	qty int,
 	orderRepo entity.RepositoryOrder,
-) (entity.Order, error) {
-	id, err := orderRepo.CreateRequestSell(userOrderID, userID, symbol, limitPrice, qty)
+) (topOrder entity.Order, isCrossBook bool, err error) {
+	topBuyingOrder, err := orderRepo.GetBuyingTopOrder(symbol)
 	if err != nil {
-		return entity.Order{}, err
+		return topOrder, isCrossBook, err
 	}
 
-	// TODO: still missing stuff
-	// TODO: what is crossed?! need that for rejections
+	// check if the request will cross book
+	isCrossBook = topBuyingOrder.Price != 0 && limitPrice <= topBuyingOrder.Price
+	if isCrossBook {
+		return topOrder, isCrossBook, nil
+	}
 
-	topOrder, err := orderRepo.GetSellingTopOrder(symbol)
+	_, err = orderRepo.CreateRequestSell(userOrderID, userID, symbol, limitPrice, qty)
 	if err != nil {
-		return entity.Order{}, err
+		return topOrder, isCrossBook, err
 	}
 
-	if topOrder.ID != id {
-		return entity.Order{}, nil
+	// TODO: match and trade
+
+	topOrder, err = orderRepo.GetSellingTopOrder(symbol)
+	if err != nil {
+		return entity.Order{}, isCrossBook, err
 	}
 
-	return topOrder, nil
+	// DEV: the count for the TopOrder is done per user
+	if topOrder.UserID != userID {
+		topOrder = entity.Order{}
+	}
+
+	return topOrder, isCrossBook, nil
 }
