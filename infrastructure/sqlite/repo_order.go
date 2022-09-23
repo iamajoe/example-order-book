@@ -8,9 +8,6 @@ import (
 	"github.com/joesantosio/example-order-book/entity"
 )
 
-// ------------------------------
-//
-
 func getSideValidity(side string) bool {
 	return !(side != "ask" && side != "bid" && side != "buy" && side != "sell")
 }
@@ -22,9 +19,6 @@ func getOpenStateBySide(side string) int {
 
 	return 1
 }
-
-// ------------------------------
-// repository
 
 type repositoryOrder struct {
 	tableName string
@@ -39,7 +33,6 @@ func (repo *repositoryOrder) Create(
 	price int,
 	size int,
 ) (int, error) {
-	timeNow := time.Now().UnixMilli()
 
 	// make sure the side is valid with what we expect
 	if !getSideValidity(side) {
@@ -55,6 +48,7 @@ func (repo *repositoryOrder) Create(
 	defer sts.Close()
 
 	isOpen := getOpenStateBySide(side)
+	timeNow := time.Now().UnixMilli()
 
 	var id int
 	err = sts.QueryRow(userOrderID, userID, symbol, side, price, size, isOpen, 0, timeNow, timeNow).Scan(&id)
@@ -188,8 +182,8 @@ func createRepositoryOrder(db *DB) (*repositoryOrder, error) {
 			size    			  INTEGER										NOT NULL,
 			isopen    			INTEGER										NOT NULL,
 			iscanceled 			INTEGER										NOT NULL,
-			createdat				INTEGER										NOT NULL,
-			updatedat				INTEGER 									NOT NULL
+				createdat				INTEGER										NOT NULL,
+				updatedat				INTEGER 									NOT NULL
 		);
 	`, repo.tableName)
 	_, err := repo.db.db.Exec(sts)

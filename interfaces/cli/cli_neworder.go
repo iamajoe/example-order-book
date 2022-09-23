@@ -38,7 +38,7 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 		return response, err
 	}
 
-	var isCrossBook bool
+	var isValid bool
 	var oldTopOrder entity.Order
 	var newTopOrder entity.Order
 
@@ -49,7 +49,7 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 			return response, err
 		}
 
-		isCrossBook, err = domain.RequestBuy(
+		isValid, err = domain.RequestBuy(
 			userOrderID,
 			userID,
 			symbol,
@@ -57,6 +57,9 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 			qty,
 			repos.GetOrder(),
 		)
+		if err != nil {
+			return response, err
+		}
 
 		newTopOrder, err = domain.GetTopOrder(symbol, "bid", repos.GetOrder())
 		if err != nil {
@@ -68,7 +71,7 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 			return response, err
 		}
 
-		isCrossBook, err = domain.RequestSell(
+		isValid, err = domain.RequestSell(
 			userOrderID,
 			userID,
 			symbol,
@@ -76,6 +79,9 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 			qty,
 			repos.GetOrder(),
 		)
+		if err != nil {
+			return response, err
+		}
 
 		newTopOrder, err = domain.GetTopOrder(symbol, "ask", repos.GetOrder())
 		if err != nil {
@@ -84,12 +90,8 @@ func newOrder(record []string, repos entity.Repositories) ([][]string, error) {
 	default:
 	}
 
-	if err != nil {
-		return response, err
-	}
-
 	// handle the response
-	if isCrossBook {
+	if isValid {
 		response = append(response, getRejectResponse(userOrderID, userID))
 	} else {
 		response = append(response, getAcknowledgeResponse(userOrderID, userID))
